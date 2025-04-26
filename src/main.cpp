@@ -1,5 +1,6 @@
 #include <TFT_eSPI.h> // Graphics and font library for ST7735 driver chip
 #include <SPI.h>
+#include <Arduino.h>
 #include <SensorQMI8658.hpp>
 
 
@@ -32,18 +33,18 @@ unsigned long microsPerReading, microsPrevious;
 void setup()
 {
     Serial.begin(115200);
-
+    // analogReadResolution(12);
     tft.init();
     // 设置屏幕旋转方向
     tft.setRotation(1);
     // 填充屏幕为黑色
     tft.fillScreen(TFT_BLACK);
     // 设置字体颜色
-    tft.setTextColor(TFT_WHITE);
+    tft.setTextColor(TFT_WHITE,TFT_BLACK);
     // 设置文本大小为2倍
     tft.setTextSize(2);
     // 在屏幕上显示文本
-    tft.setCursor(20, 20);
+    tft.setCursor(0, 0);
 
 
     if (!qmi.begin(Wire, QMI8658_L_SLAVE_ADDRESS, SENSOR_SDA, SENSOR_SCL)) {
@@ -65,7 +66,7 @@ void setup()
          * */
         SensorQMI8658::ACC_RANGE_2G,
         /*
-         * ACC_ODR_1000H
+         * ACC_ODR_1000Hz
          * ACC_ODR_500Hz
          * ACC_ODR_250Hz
          * ACC_ODR_125Hz
@@ -125,10 +126,12 @@ void setup()
     microsPrevious = micros();
 
     pinMode(LCD_POWER_ON, OUTPUT);
+    pinMode(PIN_11,OUTPUT);
     digitalWrite(LCD_POWER_ON, HIGH);
+    digitalWrite(PIN_11, LOW);
 
     // Print register configuration information
-    qmi.dumpCtrlRegister();
+    // qmi.dumpCtrlRegister();
     Serial.println("Read data now...");
 }
 
@@ -151,7 +154,22 @@ void loop()
             Serial.print("$IMU_Data:");Serial.print(timestamp);Serial.print(",");
             Serial.printf("%f,%f,%f,%f,%f,%f\r\n", Acc_data.x,Acc_data.y,Acc_data.z,Gyro_data.x,Gyro_data.y,Gyro_data.z);
         }
-        // increment previous time, so we keep proper pace
+        // // 读取 ADC 原始值
+        // int raw = analogRead(A0);
+        // // 将原始值转换为电压 (0 - VCC)
+        // float vOut = raw / 4095.0 * 3.3;
+
+        // // 串口打印
+        // Serial.printf("Raw: %4d  Voltage: %.2f V\n", raw, vOut);
+
+        // // 阈值提示
+        // if (vOut > 1) {
+        //     Serial.println("*** Threshold Exceeded! ***");
+        //     digitalWrite(PIN_11,HIGH);
+        // }
+        // else{
+        //     digitalWrite(PIN_11,LOW);
+        // }
         microsPrevious = microsPrevious + microsPerReading;
     }
 }
