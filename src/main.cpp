@@ -2,7 +2,11 @@
 #include <SPI.h>
 #include <Arduino.h>
 #include <SensorQMI8658.hpp>
+#include "MLX90640.h"
 
+
+static float mlx90640To[768];
+MLX90640 mlx90640(0x33);
 
 
 TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
@@ -30,8 +34,27 @@ IMUdata Gyro_data;
 
 unsigned long microsPerReading, microsPrevious;
 
+/**
+ * @brief 将一帧温度数据以 CSV 格式通过串口发送
+ *
+ * @param data 指向温度数据数组的指针，数组长度为 len
+ * @param len  数组长度（例如 768）
+ */
+void sendFrameCSV(const float* data, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+      Serial.print(data[i], 2);  // 保留两位小数
+      if (i < len - 1) {
+        Serial.print(",");       // 数据之间用逗号分隔
+      }
+    }
+    Serial.println();            // 换行符表示该帧结束
+  }
+
+
 void setup()
 {
+    Wire.begin();
+    Wire.setClock(400000); 
     Serial.begin(115200);
     // analogReadResolution(12);
     tft.init();
@@ -45,6 +68,12 @@ void setup()
     tft.setTextSize(2);
     // 在屏幕上显示文本
     tft.setCursor(0, 0);
+
+
+    Serial.print("Start MLX check");
+    mlx90640.check();
+    mlx90640.begin();
+    Serial.print("MLX is ready");
 
 
     if (!qmi.begin(Wire, QMI8658_L_SLAVE_ADDRESS, SENSOR_SDA, SENSOR_SCL)) {
@@ -137,6 +166,8 @@ void setup()
 
 void loop()
 {
+    mlx90640.getData(mlx90640To);
+    sendFrameCSV(mlx90640To, 768);
     if (micros() - microsPrevious >= microsPerReading) {
         if (qmi.getDataReady()) {
             tft.setCursor(0, 0);
